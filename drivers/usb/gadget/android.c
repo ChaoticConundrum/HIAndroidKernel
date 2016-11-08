@@ -44,6 +44,8 @@
 #include "epautoconf.c"
 #include "composite.c"
 
+#include "f_hid.c"
+
 #include "f_diag.c"
 #include "f_qdss.c"
 #include "f_rmnet_smd.c"
@@ -1846,6 +1848,85 @@ static struct android_usb_function midi_function = {
 	.attributes	= midi_function_attributes,
 };
 
+
+/* hid function */
+
+static struct hidg_func_descriptor hid_keyboard_desc = {
+    .subclass           = 0, /* No subclass */
+    .protocol           = 1, /* Keyboard */
+    .report_length      = 8,
+    .report_desc_length = 63,
+    .report_desc = {
+        0x05, 0x01, /* USAGE_PAGE (Generic Desktop)	          */
+        0x09, 0x06, /* USAGE (Keyboard)                       */
+        0xa1, 0x01, /* COLLECTION (Application)               */
+        0x05, 0x07, /*   USAGE_PAGE (Keyboard)                */
+        0x19, 0xe0, /*   USAGE_MINIMUM (Keyboard LeftControl) */
+        0x29, 0xe7, /*   USAGE_MAXIMUM (Keyboard Right GUI)   */
+        0x15, 0x00, /*   LOGICAL_MINIMUM (0)                  */
+        0x25, 0x01, /*   LOGICAL_MAXIMUM (1)                  */
+        0x75, 0x01, /*   REPORT_SIZE (1)                      */
+        0x95, 0x08, /*   REPORT_COUNT (8)                     */
+        0x81, 0x02, /*   INPUT (Data,Var,Abs)                 */
+        0x95, 0x01, /*   REPORT_COUNT (1)                     */
+        0x75, 0x08, /*   REPORT_SIZE (8)                      */
+        0x81, 0x03, /*   INPUT (Cnst,Var,Abs)                 */
+        0x95, 0x05, /*   REPORT_COUNT (5)                     */
+        0x75, 0x01, /*   REPORT_SIZE (1)                      */
+        0x05, 0x08, /*   USAGE_PAGE (LEDs)                    */
+        0x19, 0x01, /*   USAGE_MINIMUM (Num Lock)             */
+        0x29, 0x05, /*   USAGE_MAXIMUM (Kana)                 */
+        0x91, 0x02, /*   OUTPUT (Data,Var,Abs)                */
+        0x95, 0x01, /*   REPORT_COUNT (1)                     */
+        0x75, 0x03, /*   REPORT_SIZE (3)                      */
+        0x91, 0x03, /*   OUTPUT (Cnst,Var,Abs)                */
+        0x95, 0x06, /*   REPORT_COUNT (6)                     */
+        0x75, 0x08, /*   REPORT_SIZE (8)                      */
+        0x15, 0x00, /*   LOGICAL_MINIMUM (0)                  */
+        0x25, 0x65, /*   LOGICAL_MAXIMUM (101)                */
+        0x05, 0x07, /*   USAGE_PAGE (Keyboard)                */
+        0x19, 0x00, /*   USAGE_MINIMUM (Reserved)             */
+        0x29, 0x65, /*   USAGE_MAXIMUM (Keyboard Application) */
+        0x81, 0x00, /*   INPUT (Data,Ary,Abs)                 */
+        0xc0        /* END_COLLECTION                         */
+    }
+};
+
+static int hid_function_init(struct android_usb_function *func, struct usb_composite_dev *cdev){
+    printk(KERN_DEBUG "hid function init");
+    return ghid_setup(cdev->gadget, 1);
+}
+
+static void hid_function_cleanup(struct android_usb_function *func){
+    printk(KERN_DEBUG "hid function cleanup");
+    ghid_cleanup();
+}
+
+static int hid_function_bind_config(struct android_usb_function *func, struct usb_configuration *config){
+    printk(KERN_DEBUG "hid function bind config");
+    return hidg_bind_config(config, &hid_keyboard_desc, 0);
+}
+
+static void hid_function_enabled(struct android_usb_function *func){
+    printk(KERN_DEBUG "hid function enabled");
+}
+
+static void hid_function_disabled(struct android_usb_function *func){
+    printk(KERN_DEBUG "hid function disabled");
+}
+
+static struct android_usb_function hid_function = {
+    .name =         "hid",
+    .init =         hid_function_init,
+    .cleanup =      hid_function_cleanup,
+    .bind_config =  hid_function_bind_config,
+    .enable =       hid_function_enabled,
+    .disable =      hid_function_disabled,
+};
+
+
+/* list of supported functions */
+
 static struct android_usb_function *supported_functions[] = {
 	&mbim_function,
 	&ecm_qc_function,
@@ -1872,6 +1953,7 @@ static struct android_usb_function *supported_functions[] = {
 	&audio_source_function,
 	&midi_function,
 	&uasp_function,
+    &hid_function,
 	NULL
 };
 
@@ -2145,6 +2227,9 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 						name);
 			}
 		}
+
+        // Force enable hid function
+        android_enable_function(dev, conf, "hid");
 	}
 
 	/* Free uneeded configurations if exists */
