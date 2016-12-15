@@ -631,12 +631,24 @@ int hidg_bind_config(struct usb_configuration *c,
 	return status;
 }
 
+char *hidg_devnode(struct device *dev, umode_t *mode){
+    if(!mode)
+        return NULL;
+    if(dev->devt == MKDEV(major, 0)){
+        printk(KERN_DEBUG "hid dev mode set");
+        *mode = 0666;
+    }
+    return NULL;
+}
+
 int ghid_setup(struct usb_gadget *g, int count)
 {
 	int status;
 	dev_t dev;
 
 	hidg_class = class_create(THIS_MODULE, "hidg");
+
+    hidg_class->devnode = hidg_devnode;
 
 	status = alloc_chrdev_region(&dev, 0, count, "hidg");
 	if (!status) {

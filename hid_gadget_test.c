@@ -311,12 +311,14 @@ int main(int argc, const char *argv[])
 			if (to_send == -1)
 				break;
 
+            printf("%x %x %x %x %x %x %x %x\n", report[0], report[1], report[2], report[3], report[4], report[5], report[6], report[7]);
 			if (write(fd, report, to_send) != to_send) {
 				perror(filename);
 				return 5;
 			}
 			if (!hold) {
 				memset(report, 0x0, sizeof(report));
+                printf("%x %x %x %x %x %x %x %x\n", report[0], report[1], report[2], report[3], report[4], report[5], report[6], report[7]);
 				if (write(fd, report, to_send) != to_send) {
 					perror(filename);
 					return 6;
